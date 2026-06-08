@@ -69,7 +69,7 @@ npm run build
 - Asset issuers: optional USDC issuer present in the repo for extended demos: `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`
 
 ## Team
-- [Your Name] — @[github-username]
+-  Kishiel Faith G. Yutuc  yutuc_kishielfaith@plpasig.edu.ph
 
 ## License
 MIT
