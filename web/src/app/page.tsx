@@ -41,6 +41,11 @@ function formatMerchant(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-6)}`;
 }
 
+function formatHash(hash: string): string {
+  if (!hash) return '';
+  return `${hash.slice(0, 8)}…${hash.slice(-8)}`;
+}
+
 function buildMockQrMatrix(seed: string): boolean[][] {
   const size = 21;
   const matrix = Array.from({ length: size }, () => Array<boolean>(size).fill(false));
@@ -212,7 +217,7 @@ export default function Home() {
                   <div>
                     <p className="text-sm text-slate-300">Connected wallet</p>
                     <p className="mt-1 break-all font-mono text-sm text-white">
-                      {publicKey}
+                      {publicKey ? formatMerchant(publicKey) : ''}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
@@ -243,7 +248,7 @@ export default function Home() {
                         Demo wallet
                       </p>
                       <p className="mt-1 break-all font-mono text-xs text-slate-300">
-                        {DEMO_FREIGHTER_WALLET_ADDRESS}
+                        {DEMO_FREIGHTER_WALLET_ADDRESS ? formatMerchant(DEMO_FREIGHTER_WALLET_ADDRESS) : ''}
                       </p>
                     </div>
                   )}
@@ -387,7 +392,7 @@ export default function Home() {
                     {CANTEEN_MERCHANT_NAME}
                   </p>
                   <p className="mt-1 break-all font-mono text-sm text-slate-300">
-                    {CANTEEN_MERCHANT_ADDRESS}
+                    {formatMerchant(CANTEEN_MERCHANT_ADDRESS)}
                   </p>
                   <p className="mt-2 text-sm text-slate-400">
                     {formatMerchant(CANTEEN_MERCHANT_ADDRESS)}
@@ -496,7 +501,7 @@ export default function Home() {
                       rel="noreferrer"
                       className="mt-2 block break-all font-mono text-sm text-slate-800 underline decoration-slate-300 underline-offset-4 transition hover:decoration-slate-800"
                     >
-                      {receipt.hash}
+                      {formatHash(receipt.hash)}
                     </a>
                   </div>
                 </div>
