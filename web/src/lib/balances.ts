@@ -1,39 +1,61 @@
-import { Horizon } from '@stellar/stellar-sdk';
-import { HORIZON_URL } from './stellar';
+import { USDC_ISSUER, horizonServer } from './stellar';
 
-// Horizon is used for historical/account reads like balances.
-const horizon = new Horizon.Server(HORIZON_URL);
-
-export interface Balances {
-  xlm: string;
-  usdc: string;
-  funded: boolean;
+export interface BalanceSnapshot {
+  xlmBalance: string;
+  usdcBalance: string;
+  accountExists: boolean;
+  hasUsdcTrustline: boolean;
 }
 
-export async function fetchBalances(publicKey: string): Promise<Balances> {
-  try {
-    const account = await horizon.loadAccount(publicKey);
-    let xlm = '0';
-    let usdc = '0';
+function formatBalance(value: string): string {
+  const amount = Number.parseFloat(value);
+  return Number.isFinite(amount) ? amount.toFixed(2) : '0.00';
+}
 
-    for (const b of account.balances) {
-      if (b.asset_type === 'native') {
-        xlm = parseFloat(b.balance).toFixed(2);
-      } else if (
-        (b.asset_type === 'credit_alphanum4' ||
-          b.asset_type === 'credit_alphanum12') &&
-        b.asset_code === 'USDC'
-      ) {
-        usdc = parseFloat(b.balance).toFixed(2);
+export async function fetchBalances(address: string): Promise<BalanceSnapshot> {
+  try {
+    const account = await horizonServer.loadAccount(address);
+
+    let xlmBalance = '0.00';
+    let usdcBalance = '0.00';
+    let hasUsdcTrustline = false;
+
+    for (const balance of account.balances) {
+      if (balance.asset_type === 'native') {
+        xlmBalance = formatBalance(balance.balance);
+        continue;
+      }
+
+      const isUsdcTrustline =
+        (balance.asset_type === 'credit_alphanum4' ||
+          balance.asset_type === 'credit_alphanum12') &&
+        balance.asset_code === 'USDC' &&
+        balance.asset_issuer === USDC_ISSUER;
+
+      if (isUsdcTrustline) {
+        hasUsdcTrustline = true;
+        usdcBalance = formatBalance(balance.balance);
       }
     }
-    return { xlm, usdc, funded: true };
-  } catch (e: unknown) {
-    // 404 = account does not exist yet (not funded).
-    const status = (e as { response?: { status?: number } })?.response?.status;
-    if (status === 404 || (e as { name?: string })?.name === 'NotFoundError') {
-      return { xlm: '0', usdc: '0', funded: false };
+
+    return {
+      xlmBalance,
+      usdcBalance,
+      accountExists: true,
+      hasUsdcTrustline,
+    };
+  } catch (error: unknown) {
+    const status = (error as { response?: { status?: number } })?.response?.status;
+
+    if (status === 404 || (error as { name?: string })?.name === 'NotFoundError') {
+      return {
+        xlmBalance: '0.00',
+        usdcBalance: '0.00',
+        accountExists: false,
+        hasUsdcTrustline: false,
+      };
     }
-    throw e;
+
+    throw error;
   }
 }

@@ -1,29 +1,37 @@
-import { rpc, Networks, Asset } from '@stellar/stellar-sdk';
+import { Asset, Horizon, Networks, rpc } from '@stellar/stellar-sdk';
 
-// Network passphrase comes from the SDK constant, NOT a hardcoded string —
-// a wrong passphrase shows up as a misleading `tx_bad_auth` error.
 export const NETWORK_PASSPHRASE = Networks.TESTNET;
 
 export const RPC_URL =
   process.env.NEXT_PUBLIC_SOROBAN_RPC ?? 'https://soroban-testnet.stellar.org';
+
 export const HORIZON_URL =
   process.env.NEXT_PUBLIC_HORIZON_URL ?? 'https://horizon-testnet.stellar.org';
-export const USDC_ISSUER = process.env.NEXT_PUBLIC_USDC_ISSUER ?? '';
-export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID ?? '';
 
-// v15 SDK: use the `rpc` namespace (the old `SorobanRpc` namespace is gone).
-export const server = new rpc.Server(RPC_URL);
+export const USDC_ISSUER =
+  process.env.NEXT_PUBLIC_USDC_ISSUER ??
+  'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+
+export const CANTEEN_MERCHANT_ADDRESS =
+  process.env.NEXT_PUBLIC_CANTEEN_MERCHANT_ADDRESS ?? USDC_ISSUER;
+
+export const DEMO_FREIGHTER_WALLET_ADDRESS =
+  process.env.NEXT_PUBLIC_DEMO_FREIGHTER_WALLET_ADDRESS ?? '';
+
+export const CANTEEN_MERCHANT_NAME = 'Main Canteen Merchant';
+
+export const rpcServer = new rpc.Server(RPC_URL);
+export const horizonServer = new Horizon.Server(HORIZON_URL);
 
 export const XLM = Asset.native();
-export const USDC = USDC_ISSUER ? new Asset('USDC', USDC_ISSUER) : null;
+export const USDC = new Asset('USDC', USDC_ISSUER);
 
-/** Fund a testnet account via Friendbot (~10,000 XLM). */
 export async function fundTestnetAccount(publicKey: string): Promise<void> {
-  const res = await fetch(
+  const response = await fetch(
     `https://friendbot.stellar.org?addr=${encodeURIComponent(publicKey)}`,
   );
-  // 400 usually means "account already funded" — not a real failure for our flow.
-  if (!res.ok && res.status !== 400) {
+
+  if (!response.ok && response.status !== 400) {
     throw new Error('Friendbot funding failed. Try again in a moment.');
   }
 }

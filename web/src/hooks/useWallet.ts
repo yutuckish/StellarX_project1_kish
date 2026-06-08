@@ -1,15 +1,6 @@
 'use client';
 import { useState, useCallback } from 'react';
-
-const TIMEOUT_MS = 3000;
-
-// Freighter API calls can hang if the extension is missing — race them with a timeout.
-function withTimeout<T>(p: Promise<T>, fallback: T, ms = TIMEOUT_MS): Promise<T> {
-  return Promise.race([
-    p,
-    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-  ]);
-}
+import { connectFreighter } from '@/lib/freighter';
 
 export interface WalletState {
   publicKey: string | null;
@@ -28,26 +19,7 @@ export function useWallet(): WalletState {
     setConnecting(true);
     setError(null);
     try {
-      // Dynamic import only — a static import breaks SSR (browser globals).
-      const freighter = await import('@stellar/freighter-api');
-
-      const connected = await withTimeout(freighter.isConnected(), {
-        isConnected: false,
-      });
-      if (!connected.isConnected) {
-        throw new Error(
-          'Freighter not detected. Install it from freighter.app and reload.',
-        );
-      }
-
-      // requestAccess() prompts the user and returns their address (Freighter v6).
-      const access = await freighter.requestAccess();
-      if (access.error) throw new Error(access.error);
-      if (!access.address) {
-        throw new Error('No address returned — did you approve the request?');
-      }
-
-      setPublicKey(access.address);
+      setPublicKey(await connectFreighter());
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to connect wallet');
     } finally {

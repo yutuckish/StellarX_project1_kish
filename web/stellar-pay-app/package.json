@@ -1,5 +1,5 @@
 {
-  "name": "web",
+  "name": "stellar-pay-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,8 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@stellar/freighter-api": "^6.0.1",
-    "@stellar/stellar-sdk": "^14.6.1",
     "next": "^15.5.19",
     "react": "19.2.4",
     "react-dom": "19.2.4"

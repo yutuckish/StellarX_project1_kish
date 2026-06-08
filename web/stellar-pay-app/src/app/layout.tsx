@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'ByteBite',
+  title: 'School Canteen Digital Wallet',
   description:
-    'A minimal Stellar testnet wallet demo for student allowances and canteen payments.',
+    'A canteen-style Next.js demo for Stellar testnet wallet flows.',
 };
 
 export default function RootLayout({

@@ -1,59 +1,82 @@
-import {
-  TransactionBuilder,
-  Operation,
-  Asset,
-  BASE_FEE,
-} from '@stellar/stellar-sdk';
-import { server, NETWORK_PASSPHRASE, USDC_ISSUER } from './stellar';
+import { Asset, BASE_FEE, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
+import { NETWORK_PASSPHRASE, horizonServer, rpcServer } from './stellar';
 
-export type AssetCode = 'XLM' | 'USDC';
+const POLL_INTERVAL_MS = 1000;
 
-/** Build an unsigned classic payment transaction and return its XDR. */
-export async function buildPaymentXDR(
+export interface PaymentReceipt {
+  hash: string;
+  ledger: number;
+}
+
+export async function buildXlmPaymentXdr(
   sender: string,
   destination: string,
   amount: string,
-  assetCode: AssetCode,
 ): Promise<string> {
-  const asset =
-    assetCode === 'XLM' ? Asset.native() : new Asset('USDC', USDC_ISSUER);
+  const parsedAmount = Number.parseFloat(amount);
 
-  // Always load the account fresh so we have the current sequence number.
-  const account = await server.getAccount(sender);
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    throw new Error('Enter a valid XLM amount.');
+  }
 
-  const tx = new TransactionBuilder(account, {
+  const account = await horizonServer.loadAccount(sender);
+  const transaction = new TransactionBuilder(account, {
     fee: BASE_FEE,
     networkPassphrase: NETWORK_PASSPHRASE,
   })
-    .addOperation(Operation.payment({ destination, asset, amount }))
+    .addOperation(
+      Operation.payment({
+        destination,
+        asset: Asset.native(),
+        amount: parsedAmount.toFixed(7),
+      }),
+    )
     .setTimeout(60)
     .build();
 
-  return tx.toXDR();
+  return transaction.toXDR();
 }
 
-/** Submit a Freighter-signed XDR. Returns the transaction hash. */
-export async function submitSignedXDR(signedXdr: string): Promise<string> {
-  const tx = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
-  const res = await server.sendTransaction(tx);
-  if (res.status === 'ERROR') {
-    throw new Error(`Submit rejected: ${JSON.stringify(res.errorResult ?? res)}`);
+export async function submitSignedPaymentXdr(signedXdr: string): Promise<string> {
+  const transaction = TransactionBuilder.fromXDR(
+    signedXdr,
+    NETWORK_PASSPHRASE,
+  );
+  const response = await rpcServer.sendTransaction(transaction);
+
+  if (response.status === 'ERROR') {
+    throw new Error('Payment submission was rejected by the network.');
   }
-  return res.hash;
+
+  if (!response.hash) {
+    throw new Error('The network did not return a transaction hash.');
+  }
+
+  return response.hash;
 }
 
-/**
- * Poll until the transaction reaches finality.
- * `sendTransaction` returning PENDING is NOT success — you must poll.
- */
-export async function pollTransaction(hash: string): Promise<void> {
-  for (let i = 0; i < 60; i++) {
-    await new Promise((r) => setTimeout(r, 1000));
-    const res = await server.getTransaction(hash);
-    if (res.status !== 'NOT_FOUND') {
-      if (res.status === 'SUCCESS') return;
-      throw new Error(`Transaction ${res.status}`);
+export async function waitForPaymentConfirmation(
+  hash: string,
+  timeoutMs = 60_000,
+): Promise<PaymentReceipt> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const result = await rpcServer.getTransaction(hash);
+
+    if (result.status === 'SUCCESS') {
+      return {
+        hash,
+        ledger: Number(result.ledger ?? 0),
+      };
     }
+
+    if (result.status === 'FAILED') {
+      throw new Error('The payment failed on-chain.');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
-  throw new Error('Transaction timed out after 60s');
+
+  throw new Error('The payment was not confirmed within 60 seconds.');
 }
