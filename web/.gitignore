@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -39,3 +40,26 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+=======
+# Rust / Soroban
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Node / Next.js (the web/ app keeps its own .gitignore too)
+node_modules
+.next
+*.log
+
+# Local env files (never commit secrets)
+.env
+.env.local
+.env*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea
+.vscode/*
+!.vscode/extensions.json
+>>>>>>> f97266c79bc72b65153b3fd1cdec9e04c8c96696
